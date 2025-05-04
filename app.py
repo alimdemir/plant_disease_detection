@@ -3,6 +3,7 @@ import numpy as np
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
 from PIL import Image
+import os
 
 # Sayfa yapılandırması
 st.set_page_config(
@@ -37,12 +38,25 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
+# Model dosyasının yolunu belirle
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "plant_diesase_model.h5")
+
 # Modeli yükle
 @st.cache_resource
 def load_plant_model():
-    return load_model("bitki_modeli.h5")
+    try:
+        if not os.path.exists(MODEL_PATH):
+            st.error(f"Model dosyası bulunamadı: {MODEL_PATH}")
+            return None
+        return load_model(MODEL_PATH)
+    except Exception as e:
+        st.error(f"Model yüklenirken hata oluştu: {str(e)}")
+        return None
 
 model = load_plant_model()
+if model is None:
+    st.stop()
+
 class_names = ["Sağlıklı", "Hastalıklı"]
 img_height, img_width = 224, 224
 
