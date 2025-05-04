@@ -5,7 +5,7 @@ from PIL import Image
 import os
 import h5py
 import json
-import gdown
+import requests
 
 # Sayfa yapılandırması
 st.set_page_config(
@@ -29,9 +29,23 @@ def download_model():
             st.info("Model dosyası indiriliyor...")
             # Google Drive linki
             file_id = "1yHv9PV0KlezrKTIVg6yhBf9QM980EfhX"
-            url = f'https://drive.google.com/uc?id={file_id}'
+            url = f'https://drive.google.com/uc?export=download&id={file_id}'
+            
             # Dosyayı indir
-            gdown.download(url, MODEL_PATH, quiet=False)
+            response = requests.get(url, stream=True)
+            total_size = int(response.headers.get('content-length', 0))
+            
+            with open(MODEL_PATH, 'wb') as f:
+                if total_size == 0:
+                    f.write(response.content)
+                else:
+                    downloaded = 0
+                    for data in response.iter_content(chunk_size=4096):
+                        downloaded += len(data)
+                        f.write(data)
+                        progress = int(50 * downloaded / total_size)
+                        st.write(f"İndiriliyor: [{'=' * progress}{' ' * (50 - progress)}] {downloaded}/{total_size} bytes")
+            
             st.success("Model dosyası başarıyla indirildi!")
             return True
         return True
