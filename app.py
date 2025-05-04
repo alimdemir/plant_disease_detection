@@ -1,9 +1,19 @@
 import streamlit as st
 import numpy as np
-from tensorflow.keras.models import load_model
+from tensorflow.keras.models import load_model, Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
 from tensorflow.keras.preprocessing import image
 from PIL import Image
 import os
+
+# Debug bilgisi
+st.write("Çalışma dizini:", os.getcwd())
+st.write("Dosya listesi:", os.listdir())
+
+# Model dosyasının yolunu belirle
+MODEL_PATH = os.path.join(os.getcwd(), "plant_diesase_model.h5")
+st.write("Model dosyası yolu:", MODEL_PATH)
+st.write("Model dosyası var mı:", os.path.exists(MODEL_PATH))
 
 # Sayfa yapılandırması
 st.set_page_config(
@@ -38,16 +48,32 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# Model dosyasının yolunu belirle
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "plant_diesase_model.h5")
+# Model oluştur
+@st.cache_resource
+def create_model():
+    model = Sequential([
+        Conv2D(32, (3, 3), activation='relu', input_shape=(224, 224, 3)),
+        MaxPooling2D((2, 2)),
+        Conv2D(64, (3, 3), activation='relu'),
+        MaxPooling2D((2, 2)),
+        Conv2D(64, (3, 3), activation='relu'),
+        Flatten(),
+        Dense(64, activation='relu'),
+        Dense(2, activation='softmax')
+    ])
+    
+    model.compile(optimizer='adam',
+                 loss='categorical_crossentropy',
+                 metrics=['accuracy'])
+    
+    return model
 
-# Modeli yükle
+# Modeli yükle veya oluştur
 @st.cache_resource
 def load_plant_model():
     try:
-        if not os.path.exists(MODEL_PATH):
-            st.error(f"Model dosyası bulunamadı: {MODEL_PATH}")
-            return None
+        st.write("Model yükleniyor...")
+        st.write("Dosya boyutu:", os.path.getsize(MODEL_PATH) if os.path.exists(MODEL_PATH) else "Dosya yok")
         return load_model(MODEL_PATH)
     except Exception as e:
         st.error(f"Model yüklenirken hata oluştu: {str(e)}")
