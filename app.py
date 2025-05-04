@@ -12,82 +12,27 @@ st.set_page_config(
     layout="centered"
 )
 
-# Debug bilgisi
-st.write("Çalışma dizini:", os.getcwd())
-st.write("Dosya listesi:", os.listdir())
-
-# Eski model dosyasını sil
-if os.path.exists("plant_diesase_model.h5"):
-    try:
-        os.remove("plant_diesase_model.h5")
-        st.info("Eski model dosyası silindi.")
-    except Exception as e:
-        st.error(f"Eski model dosyası silinirken hata oluştu: {str(e)}")
-
-# Model dosyasının yolunu belirle
-MODEL_PATH = "plant_diesase_model.keras"
-
-# Google Drive'dan model indirme
-@st.cache_resource
-def download_model():
-    try:
-        if not os.path.exists(MODEL_PATH):
-            st.info("Model dosyası indiriliyor...")
-            
-            # Google Drive linki
-            url = "https://drive.google.com/uc?export=download&id=1yHv9PV0KlezrKTIVg6yhBf9QM980EfhX"
-            
-            # Dosyayı indir
-            session = requests.Session()
-            response = session.get(url, stream=True)
-            
-            # Büyük dosyalar için onay sayfası kontrolü
-            for key, value in response.cookies.items():
-                if key.startswith('download_warning'):
-                    url = f'https://drive.google.com/uc?export=download&confirm={value}&id=1yHv9PV0KlezrKTIVg6yhBf9QM980EfhX'
-                    response = session.get(url, stream=True)
-                    break
-            
-            # Dosyayı indir
-            total_size = int(response.headers.get('content-length', 0))
-            block_size = 1024  # 1 KB
-            
-            with open(MODEL_PATH, 'wb') as f:
-                downloaded = 0
-                for data in response.iter_content(block_size):
-                    downloaded += len(data)
-                    f.write(data)
-                    progress = int(50 * downloaded / total_size) if total_size > 0 else 0
-                    st.write(f"İndiriliyor: [{'=' * progress}{' ' * (50 - progress)}] {downloaded}/{total_size} bytes")
-            
-            # Dosya boyutunu kontrol et
-            file_size = os.path.getsize(MODEL_PATH)
-            st.write(f"İndirilen dosya boyutu: {file_size} bytes")
-            
-            if file_size < 1000:  # Eğer dosya çok küçükse
-                st.error("İndirilen dosya çok küçük, muhtemelen indirme başarısız oldu.")
-                return False
-            
-            st.success("Model dosyası başarıyla indirildi!")
-            return True
-        return True
-    except Exception as e:
-        st.error(f"Model indirilirken hata oluştu: {str(e)}")
-        return False
-
-# Modeli indir
-if not download_model():
-    st.stop()
-
-# Modeli yükle
+# Google Drive'dan model yükleme
 @st.cache_resource
 def load_model():
     try:
         st.write("Model yükleniyor...")
-        # Modeli compile=False ile yükle
-        model = tf.keras.models.load_model(MODEL_PATH, compile=False)
-        # Modeli manuel olarak derle
-        model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+        # Google Drive linki
+        url = "https://drive.google.com/uc?export=download&id=1yHv9PV0KlezrKTIVg6yhBf9QM980EfhX"
+        
+        # Dosyayı indir
+        session = requests.Session()
+        response = session.get(url, stream=True)
+        
+        # Büyük dosyalar için onay sayfası kontrolü
+        for key, value in response.cookies.items():
+            if key.startswith('download_warning'):
+                url = f'https://drive.google.com/uc?export=download&confirm={value}&id=1yHv9PV0KlezrKTIVg6yhBf9QM980EfhX'
+                response = session.get(url, stream=True)
+                break
+        
+        # Modeli doğrudan yükle
+        model = tf.keras.models.load_model(response.content)
         st.success("Model başarıyla yüklendi!")
         return model
     except Exception as e:
