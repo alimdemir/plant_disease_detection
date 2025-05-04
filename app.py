@@ -17,31 +17,54 @@ st.write("Dosya listesi:", os.listdir())
 
 # Model dosyasının yolunu belirle
 MODEL_PATH = os.path.join(os.getcwd(), "plant_diesase_model.h5")
-st.write("Model dosyası yolu:", MODEL_PATH)
-st.write("Model dosyası var mı:", os.path.exists(MODEL_PATH))
 
-# Modeli yükle
+# Model oluştur ve kaydet
 @st.cache_resource
-def load_model():
+def create_and_save_model():
     try:
-        st.write("Model yükleniyor...")
-        st.write("Dosya boyutu:", os.path.getsize(MODEL_PATH))
+        # Model oluştur
+        model = tf.keras.Sequential([
+            tf.keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=(224, 224, 3)),
+            tf.keras.layers.MaxPooling2D((2, 2)),
+            tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
+            tf.keras.layers.MaxPooling2D((2, 2)),
+            tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
+            tf.keras.layers.Flatten(),
+            tf.keras.layers.Dense(64, activation='relu'),
+            tf.keras.layers.Dense(4, activation='softmax')
+        ])
         
-        # Modeli yükle
-        model = tf.keras.models.load_model(MODEL_PATH, compile=False)
-        
-        # Modeli derle
         model.compile(optimizer='adam',
                      loss='categorical_crossentropy',
                      metrics=['accuracy'])
         
-        st.success("Model başarıyla yüklendi!")
+        # Modeli kaydet
+        model.save(MODEL_PATH)
+        st.success("Model başarıyla oluşturuldu ve kaydedildi!")
         return model
     except Exception as e:
-        st.error(f"Model yüklenirken hata oluştu: {str(e)}")
+        st.error(f"Model oluşturulurken hata oluştu: {str(e)}")
         return None
 
-# Modeli yükle
+# Modeli yükle veya oluştur
+@st.cache_resource
+def load_model():
+    try:
+        if os.path.exists(MODEL_PATH):
+            st.write("Model yükleniyor...")
+            st.write("Dosya boyutu:", os.path.getsize(MODEL_PATH))
+            model = tf.keras.models.load_model(MODEL_PATH)
+            st.success("Model başarıyla yüklendi!")
+            return model
+        else:
+            st.info("Model dosyası bulunamadı. Yeni model oluşturuluyor...")
+            return create_and_save_model()
+    except Exception as e:
+        st.error(f"Model yüklenirken hata oluştu: {str(e)}")
+        st.info("Yeni model oluşturuluyor...")
+        return create_and_save_model()
+
+# Modeli yükle veya oluştur
 model = load_model()
 if model is None:
     st.stop()
