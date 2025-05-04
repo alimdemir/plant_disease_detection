@@ -6,6 +6,7 @@ import os
 import h5py
 import json
 import requests
+import time
 
 # Sayfa yapılandırması
 st.set_page_config(
@@ -29,22 +30,40 @@ def download_model():
             st.info("Model dosyası indiriliyor...")
             # Google Drive linki
             file_id = "1yHv9PV0KlezrKTIVg6yhBf9QM980EfhX"
+            
+            # İndirme URL'sini oluştur
             url = f'https://drive.google.com/uc?export=download&id={file_id}'
             
+            # İlk isteği gönder
+            session = requests.Session()
+            response = session.get(url, stream=True)
+            
+            # Büyük dosyalar için onay sayfası kontrolü
+            for key, value in response.cookies.items():
+                if key.startswith('download_warning'):
+                    url = f'https://drive.google.com/uc?export=download&confirm={value}&id={file_id}'
+                    response = session.get(url, stream=True)
+                    break
+            
             # Dosyayı indir
-            response = requests.get(url, stream=True)
             total_size = int(response.headers.get('content-length', 0))
+            block_size = 1024  # 1 KB
             
             with open(MODEL_PATH, 'wb') as f:
-                if total_size == 0:
-                    f.write(response.content)
-                else:
-                    downloaded = 0
-                    for data in response.iter_content(chunk_size=4096):
-                        downloaded += len(data)
-                        f.write(data)
-                        progress = int(50 * downloaded / total_size)
-                        st.write(f"İndiriliyor: [{'=' * progress}{' ' * (50 - progress)}] {downloaded}/{total_size} bytes")
+                downloaded = 0
+                for data in response.iter_content(block_size):
+                    downloaded += len(data)
+                    f.write(data)
+                    progress = int(50 * downloaded / total_size) if total_size > 0 else 0
+                    st.write(f"İndiriliyor: [{'=' * progress}{' ' * (50 - progress)}] {downloaded}/{total_size} bytes")
+            
+            # Dosya boyutunu kontrol et
+            file_size = os.path.getsize(MODEL_PATH)
+            st.write(f"İndirilen dosya boyutu: {file_size} bytes")
+            
+            if file_size < 1000:  # Eğer dosya çok küçükse
+                st.error("İndirilen dosya çok küçük, muhtemelen indirme başarısız oldu.")
+                return False
             
             st.success("Model dosyası başarıyla indirildi!")
             return True
