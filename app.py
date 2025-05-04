@@ -4,6 +4,7 @@ import tensorflow as tf
 from PIL import Image
 import os
 import requests
+import h5py
 
 # Sayfa yapılandırması
 st.set_page_config(
@@ -11,6 +12,10 @@ st.set_page_config(
     page_icon="🌿",
     layout="centered"
 )
+
+# Debug bilgisi
+st.write("Çalışma dizini:", os.getcwd())
+st.write("Dosya listesi:", os.listdir())
 
 # Model dosyasının yolunu belirle
 MODEL_PATH = "plant_diesase_model.h5"
@@ -56,6 +61,14 @@ def download_model():
                 st.error("İndirilen dosya çok küçük, muhtemelen indirme başarısız oldu.")
                 return False
             
+            # H5 dosyasını kontrol et
+            try:
+                with h5py.File(MODEL_PATH, 'r') as f:
+                    st.write("Model dosyası içeriği:", list(f.keys()))
+            except Exception as e:
+                st.error(f"Model dosyası HDF5 formatında değil: {str(e)}")
+                return False
+            
             st.success("Model dosyası başarıyla indirildi!")
             return True
         return True
@@ -72,7 +85,10 @@ if not download_model():
 def load_model():
     try:
         st.write("Model yükleniyor...")
-        model = tf.keras.models.load_model(MODEL_PATH)
+        # Modeli compile=False ile yükle
+        model = tf.keras.models.load_model(MODEL_PATH, compile=False)
+        # Modeli manuel olarak derle
+        model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
         st.success("Model başarıyla yüklendi!")
         return model
     except Exception as e:
