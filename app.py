@@ -4,6 +4,7 @@ import tensorflow as tf
 from PIL import Image
 import os
 import h5py
+import json
 
 # Sayfa yapılandırması
 st.set_page_config(
@@ -28,18 +29,24 @@ try:
         st.write("Model dosyası içeriği:", list(f.keys()))
         for key in f.keys():
             st.write(f"Key: {key}, Shape: {f[key].shape if hasattr(f[key], 'shape') else 'No shape'}")
+            
+        # Sınıf isimlerini kontrol et
+        if 'class_names' in f.attrs:
+            class_names = json.loads(f.attrs['class_names'])
+            st.write("Model sınıf isimleri:", class_names)
+        else:
+            st.warning("Model dosyasında sınıf isimleri bulunamadı!")
+            class_names = ['Elma_Karalekesi', 'Elma_Saglikli', 'Domates_ErkenYaprakküfü', 'Domates_Saglikli']
 except Exception as e:
     st.error(f"Model dosyası okunurken hata oluştu: {str(e)}")
+    class_names = ['Elma_Karalekesi', 'Elma_Saglikli', 'Domates_ErkenYaprakküfü', 'Domates_Saglikli']
 
 # Modeli yükle
 @st.cache_resource
 def load_model():
     try:
         st.write("Model yükleniyor...")
-        model = tf.keras.models.load_model(MODEL_PATH, compile=False)
-        model.compile(optimizer='adam',
-                     loss='categorical_crossentropy',
-                     metrics=['accuracy'])
+        model = tf.keras.models.load_model(MODEL_PATH)
         st.success("Model başarıyla yüklendi!")
         return model
     except Exception as e:
@@ -51,8 +58,9 @@ model = load_model()
 if model is None:
     st.stop()
 
-# Sınıf isimleri
-class_names = ['Elma_Karalekesi', 'Elma_Saglikli', 'Domates_ErkenYaprakküfü', 'Domates_Saglikli']
+# Model özeti
+st.write("Model Özeti:")
+model.summary(print_fn=lambda x: st.text(x))
 
 # Başlık ve açıklama
 st.title("🌿 Bitki Hastalığı Tespiti")
