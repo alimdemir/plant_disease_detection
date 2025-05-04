@@ -12,10 +12,6 @@ st.set_page_config(
     layout="centered"
 )
 
-# Debug bilgisi
-st.write("Çalışma dizini:", os.getcwd())
-st.write("Dosya listesi:", os.listdir())
-
 # Model dosyasının yolunu belirle
 MODEL_PATH = "plant_diesase_model.h5"
 
