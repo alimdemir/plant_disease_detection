@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 import tensorflow as tf
 from PIL import Image
+import os
 
 # Sayfa yapılandırması
 st.set_page_config(
@@ -10,28 +11,40 @@ st.set_page_config(
     layout="centered"
 )
 
-# Model oluştur
-@st.cache_resource
-def create_model():
-    model = tf.keras.Sequential([
-        tf.keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=(224, 224, 3)),
-        tf.keras.layers.MaxPooling2D((2, 2)),
-        tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
-        tf.keras.layers.MaxPooling2D((2, 2)),
-        tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
-        tf.keras.layers.Flatten(),
-        tf.keras.layers.Dense(64, activation='relu'),
-        tf.keras.layers.Dense(4, activation='softmax')
-    ])
-    
-    model.compile(optimizer='adam',
-                 loss='categorical_crossentropy',
-                 metrics=['accuracy'])
-    
-    return model
+# Debug bilgisi
+st.write("Çalışma dizini:", os.getcwd())
+st.write("Dosya listesi:", os.listdir())
 
-# Modeli oluştur
-model = create_model()
+# Model dosyasının yolunu belirle
+MODEL_PATH = os.path.join(os.getcwd(), "plant_diesase_model.h5")
+st.write("Model dosyası yolu:", MODEL_PATH)
+st.write("Model dosyası var mı:", os.path.exists(MODEL_PATH))
+
+# Modeli yükle
+@st.cache_resource
+def load_model():
+    try:
+        st.write("Model yükleniyor...")
+        st.write("Dosya boyutu:", os.path.getsize(MODEL_PATH))
+        
+        # Modeli yükle
+        model = tf.keras.models.load_model(MODEL_PATH, compile=False)
+        
+        # Modeli derle
+        model.compile(optimizer='adam',
+                     loss='categorical_crossentropy',
+                     metrics=['accuracy'])
+        
+        st.success("Model başarıyla yüklendi!")
+        return model
+    except Exception as e:
+        st.error(f"Model yüklenirken hata oluştu: {str(e)}")
+        return None
+
+# Modeli yükle
+model = load_model()
+if model is None:
+    st.stop()
 
 # Sınıf isimleri
 class_names = ['Elma_Karalekesi', 'Elma_Saglikli', 'Domates_ErkenYaprakküfü', 'Domates_Saglikli']
