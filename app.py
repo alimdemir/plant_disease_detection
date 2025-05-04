@@ -16,8 +16,16 @@ st.set_page_config(
 st.write("Çalışma dizini:", os.getcwd())
 st.write("Dosya listesi:", os.listdir())
 
+# Eski model dosyasını sil
+if os.path.exists("plant_diesase_model.h5"):
+    try:
+        os.remove("plant_diesase_model.h5")
+        st.info("Eski model dosyası silindi.")
+    except Exception as e:
+        st.error(f"Eski model dosyası silinirken hata oluştu: {str(e)}")
+
 # Model dosyasının yolunu belirle
-MODEL_PATH = "plant_diesase_model.keras"  # .keras uzantılı model dosyası
+MODEL_PATH = "plant_diesase_model.keras"
 
 # Google Drive'dan model indirme
 @st.cache_resource
