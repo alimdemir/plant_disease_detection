@@ -1,106 +1,88 @@
 import streamlit as st
-import numpy as np
-import tensorflow as tf
-from PIL import Image
-import os
-import requests
+import pandas as pd
+import matplotlib.pyplot as plt
 
-# Sayfa yapılandırması
+# Sayfa ayarları
 st.set_page_config(
-    page_title="Bitki Hastalığı Tespiti",
-    page_icon="🌿",
-    layout="centered"
+    page_title="Modern Web Uygulaması",
+    page_icon="🌐",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-# Google Drive'dan model yükleme
-@st.cache_resource
-def load_model():
-    try:
-        st.write("Model yükleniyor...")
-        url = "https://drive.google.com/uc?export=download&id=1yHv9PV0KlezrKTIVg6yhBf9QM980EfhX"
-        
-        session = requests.Session()
-        response = session.get(url, stream=True)
-        
-        # Büyük dosyalar için onay kontrolü
-        for key, value in response.cookies.items():
-            if key.startswith('download_warning'):
-                url = f'https://drive.google.com/uc?export=download&confirm={value}&id=1yHv9PV0KlezrKTIVg6yhBf9QM980EfhX'
-                response = session.get(url, stream=True)
-                break
-
-        # İçeriği geçici bir dosyaya yaz
-        model_path = "bitki_modeli.h5"
-        with open(model_path, "wb") as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                if chunk:
-                    f.write(chunk)
-
-        # Modeli yükle
-        model = tf.keras.models.load_model(model_path)
-        st.success("Model başarıyla yüklendi!")
-        return model
-
-    except Exception as e:
-        st.error(f"Model yüklenirken hata oluştu: {str(e)}")
-        return None
-
-# Modeli yükle
-model = load_model()
-if model is None:
-    st.stop()
-
-# Model özeti
-st.write("Model Özeti:")
-model.summary(print_fn=lambda x: st.text(x))
-
-# Sınıf isimleri
-class_names = ['Elma_Karalekesi', 'Elma_Saglikli', 'Domates_ErkenYaprakküfü', 'Domates_Saglikli']
-
-# Başlık ve açıklama
-st.title("🌿 Bitki Hastalığı Tespiti")
+# --- Stil tanımı ---
 st.markdown("""
-    Bu uygulama, bitki yapraklarının sağlıklı olup olmadığını tespit etmenize yardımcı olur.
-    Lütfen bir yaprak fotoğrafı yükleyin.
-""")
-
-# Dosya yükleme alanı
-uploaded_file = st.file_uploader(
-    "Bir yaprak fotoğrafı yükleyin",
-    type=["jpg", "jpeg", "png"],
-    help="Desteklenen formatlar: JPG, JPEG, PNG"
-)
-
-if uploaded_file is not None:
-    # Görüntüyü yükle ve göster
-    image = Image.open(uploaded_file).convert('RGB')
-    st.image(image, caption='Yüklenen Görsel', use_column_width=True)
-
-    # Görüntüyü işle
-    img = image.resize((224, 224))
-    img_array = tf.keras.preprocessing.image.img_to_array(img)
-    img_array = tf.expand_dims(img_array, 0)
-    img_array = img_array / 255.0
-
-    # Tahmin yap
-    with st.spinner('Tahmin yapılıyor...'):
-        predictions = model.predict(img_array)
-        predicted_class = class_names[np.argmax(predictions[0])]
-        confidence = float(np.max(predictions[0])) * 100
-
-    # Sonucu göster
-    st.markdown(f"""
-        <div style='background-color: #dff0d8; color: #3c763d; padding: 15px; border-radius: 5px; margin-top: 20px;'>
-            <h3>🌱 Tahmin Sonucu</h3>
-            <p>Durum: <strong>{predicted_class}</strong></p>
-            <p>Güven: <strong>{confidence:.2f}%</strong></p>
-        </div>
-    """, unsafe_allow_html=True)
-
-# Alt bilgi
-st.markdown("---")
-st.markdown("""
-    <div style='text-align: center'>
-        <p>© 2024 Bitki Hastalığı Tespiti</p>
-    </div>
+    <style>
+    body {
+        background-color: #f8f9fa;
+    }
+    .main {
+        background-color: #ffffff;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.05);
+    }
+    .block-container {
+        padding-top: 2rem;
+    }
+    </style>
 """, unsafe_allow_html=True)
+
+# --- Sidebar ---
+st.sidebar.image("https://streamlit.io/images/brand/streamlit-logo-primary-colormark-darktext.png", width=180)
+st.sidebar.title("Navigasyon")
+page = st.sidebar.radio("Sayfalar", ["Ana Sayfa", "Veri Analizi", "Hakkında"])
+
+# --- Sayfa 1: Ana Sayfa ---
+if page == "Ana Sayfa":
+    st.title("🌐 Modern Web Dashboard")
+    st.markdown("Hoş geldiniz! Bu sayfa Streamlit ile yapılmış profesyonel görünümlü bir web uygulamasıdır.")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("✨ Özellikler")
+        st.markdown("""
+        - Modern UI/UX tasarımı  
+        - Gerçek zamanlı veri analizi  
+        - Responsive düzen  
+        - Sidebar navigasyonu  
+        """)
+    
+    with col2:
+        st.subheader("📈 Canlı Grafik")
+        df = pd.DataFrame({
+            'Aylar': ['Ocak', 'Şubat', 'Mart', 'Nisan'],
+            'Satış': [150, 200, 180, 250]
+        })
+        fig, ax = plt.subplots()
+        ax.plot(df['Aylar'], df['Satış'], marker='o', color='#007bff')
+        ax.set_title("Aylık Satış Verisi")
+        ax.grid(True)
+        st.pyplot(fig)
+
+# --- Sayfa 2: Veri Analizi ---
+elif page == "Veri Analizi":
+    st.title("📊 Veri Analizi")
+    uploaded_file = st.file_uploader("CSV dosyası yükle", type="csv")
+    if uploaded_file is not None:
+        data = pd.read_csv(uploaded_file)
+        st.dataframe(data.head())
+
+        st.markdown("### Sütun Seç ve Görselleştir")
+        column = st.selectbox("Sütun Seç", data.select_dtypes(include='number').columns)
+        fig, ax = plt.subplots()
+        ax.hist(data[column], bins=20, color='#17a2b8')
+        ax.set_title(f"{column} Dağılımı")
+        st.pyplot(fig)
+
+# --- Sayfa 3: Hakkında ---
+elif page == "Hakkında":
+    st.title("ℹ️ Hakkında")
+    st.markdown("""
+    Bu uygulama **Streamlit** kullanılarak geliştirilmiştir.  
+    Profesyonel görünümlü, modern bir arayüzle kullanıcı dostu bir deneyim sunar.
+    
+    Geliştirici: [Senin Adın]  
+    LinkedIn: [linkedin.com/in/seninprofilin]  
+    """)
+
