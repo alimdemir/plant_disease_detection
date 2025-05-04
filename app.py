@@ -6,6 +6,13 @@ from tensorflow.keras.preprocessing import image
 from PIL import Image
 import os
 
+# Sayfa yapılandırması (ilk komut olmalı)
+st.set_page_config(
+    page_title="Bitki Hastalığı Tespiti",
+    page_icon="🌿",
+    layout="centered"
+)
+
 # Debug bilgisi
 st.write("Çalışma dizini:", os.getcwd())
 st.write("Dosya listesi:", os.listdir())
@@ -14,13 +21,6 @@ st.write("Dosya listesi:", os.listdir())
 MODEL_PATH = os.path.join(os.getcwd(), "plant_diesase_model.h5")
 st.write("Model dosyası yolu:", MODEL_PATH)
 st.write("Model dosyası var mı:", os.path.exists(MODEL_PATH))
-
-# Sayfa yapılandırması
-st.set_page_config(
-    page_title="Bitki Hastalığı Tespiti",
-    page_icon="🌿",
-    layout="centered"
-)
 
 # CSS stilleri
 st.markdown("""
@@ -68,7 +68,7 @@ def create_model():
     
     return model
 
-# Modeli yükle veya oluştur
+# Modeli yükle
 @st.cache_resource
 def load_plant_model():
     try:
