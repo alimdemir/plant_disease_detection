@@ -4,7 +4,6 @@ import tensorflow as tf
 from PIL import Image
 import os
 import requests
-import h5py
 
 # Sayfa yapılandırması
 st.set_page_config(
@@ -18,7 +17,7 @@ st.write("Çalışma dizini:", os.getcwd())
 st.write("Dosya listesi:", os.listdir())
 
 # Model dosyasının yolunu belirle
-MODEL_PATH = "plant_diesase_model.h5"
+MODEL_PATH = "plant_diesase_model.keras"  # .keras uzantılı model dosyası
 
 # Google Drive'dan model indirme
 @st.cache_resource
@@ -59,14 +58,6 @@ def download_model():
             
             if file_size < 1000:  # Eğer dosya çok küçükse
                 st.error("İndirilen dosya çok küçük, muhtemelen indirme başarısız oldu.")
-                return False
-            
-            # H5 dosyasını kontrol et
-            try:
-                with h5py.File(MODEL_PATH, 'r') as f:
-                    st.write("Model dosyası içeriği:", list(f.keys()))
-            except Exception as e:
-                st.error(f"Model dosyası HDF5 formatında değil: {str(e)}")
                 return False
             
             st.success("Model dosyası başarıyla indirildi!")
