@@ -3,6 +3,7 @@ import numpy as np
 import tensorflow as tf
 from PIL import Image
 import os
+import h5py
 
 # Sayfa yapılandırması
 st.set_page_config(
@@ -17,54 +18,35 @@ st.write("Dosya listesi:", os.listdir())
 
 # Model dosyasının yolunu belirle
 MODEL_PATH = os.path.join(os.getcwd(), "plant_diesase_model.h5")
+st.write("Model dosyası yolu:", MODEL_PATH)
+st.write("Model dosyası var mı:", os.path.exists(MODEL_PATH))
+st.write("Dosya boyutu:", os.path.getsize(MODEL_PATH))
 
-# Model oluştur ve kaydet
-@st.cache_resource
-def create_and_save_model():
-    try:
-        # Model oluştur
-        model = tf.keras.Sequential([
-            tf.keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=(224, 224, 3)),
-            tf.keras.layers.MaxPooling2D((2, 2)),
-            tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
-            tf.keras.layers.MaxPooling2D((2, 2)),
-            tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
-            tf.keras.layers.Flatten(),
-            tf.keras.layers.Dense(64, activation='relu'),
-            tf.keras.layers.Dense(4, activation='softmax')
-        ])
-        
-        model.compile(optimizer='adam',
-                     loss='categorical_crossentropy',
-                     metrics=['accuracy'])
-        
-        # Modeli kaydet
-        model.save(MODEL_PATH)
-        st.success("Model başarıyla oluşturuldu ve kaydedildi!")
-        return model
-    except Exception as e:
-        st.error(f"Model oluşturulurken hata oluştu: {str(e)}")
-        return None
+# Model dosyasının içeriğini kontrol et
+try:
+    with h5py.File(MODEL_PATH, 'r') as f:
+        st.write("Model dosyası içeriği:", list(f.keys()))
+        for key in f.keys():
+            st.write(f"Key: {key}, Shape: {f[key].shape if hasattr(f[key], 'shape') else 'No shape'}")
+except Exception as e:
+    st.error(f"Model dosyası okunurken hata oluştu: {str(e)}")
 
-# Modeli yükle veya oluştur
+# Modeli yükle
 @st.cache_resource
 def load_model():
     try:
-        if os.path.exists(MODEL_PATH):
-            st.write("Model yükleniyor...")
-            st.write("Dosya boyutu:", os.path.getsize(MODEL_PATH))
-            model = tf.keras.models.load_model(MODEL_PATH)
-            st.success("Model başarıyla yüklendi!")
-            return model
-        else:
-            st.info("Model dosyası bulunamadı. Yeni model oluşturuluyor...")
-            return create_and_save_model()
+        st.write("Model yükleniyor...")
+        model = tf.keras.models.load_model(MODEL_PATH, compile=False)
+        model.compile(optimizer='adam',
+                     loss='categorical_crossentropy',
+                     metrics=['accuracy'])
+        st.success("Model başarıyla yüklendi!")
+        return model
     except Exception as e:
         st.error(f"Model yüklenirken hata oluştu: {str(e)}")
-        st.info("Yeni model oluşturuluyor...")
-        return create_and_save_model()
+        return None
 
-# Modeli yükle veya oluştur
+# Modeli yükle
 model = load_model()
 if model is None:
     st.stop()
