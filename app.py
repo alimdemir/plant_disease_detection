@@ -3,10 +3,7 @@ import numpy as np
 import tensorflow as tf
 from PIL import Image
 import os
-import h5py
-import json
 import requests
-import time
 
 # Sayfa yapılandırması
 st.set_page_config(
@@ -20,7 +17,7 @@ st.write("Çalışma dizini:", os.getcwd())
 st.write("Dosya listesi:", os.listdir())
 
 # Model dosyasının yolunu belirle
-MODEL_PATH = os.path.join(os.getcwd(), "plant_diesase_model.h5")
+MODEL_PATH = "plant_diesase_model.h5"
 
 # Google Drive'dan model indirme
 @st.cache_resource
@@ -28,20 +25,18 @@ def download_model():
     try:
         if not os.path.exists(MODEL_PATH):
             st.info("Model dosyası indiriliyor...")
+            
             # Google Drive linki
-            file_id = "1yHv9PV0KlezrKTIVg6yhBf9QM980EfhX"
+            url = "https://drive.google.com/uc?export=download&id=1yHv9PV0KlezrKTIVg6yhBf9QM980EfhX"
             
-            # İndirme URL'sini oluştur
-            url = f'https://drive.google.com/uc?export=download&id={file_id}'
-            
-            # İlk isteği gönder
+            # Dosyayı indir
             session = requests.Session()
             response = session.get(url, stream=True)
             
             # Büyük dosyalar için onay sayfası kontrolü
             for key, value in response.cookies.items():
                 if key.startswith('download_warning'):
-                    url = f'https://drive.google.com/uc?export=download&confirm={value}&id={file_id}'
+                    url = f'https://drive.google.com/uc?export=download&confirm={value}&id=1yHv9PV0KlezrKTIVg6yhBf9QM980EfhX'
                     response = session.get(url, stream=True)
                     break
             
@@ -76,24 +71,6 @@ def download_model():
 if not download_model():
     st.stop()
 
-# Model dosyasının içeriğini kontrol et
-try:
-    with h5py.File(MODEL_PATH, 'r') as f:
-        st.write("Model dosyası içeriği:", list(f.keys()))
-        for key in f.keys():
-            st.write(f"Key: {key}, Shape: {f[key].shape if hasattr(f[key], 'shape') else 'No shape'}")
-            
-        # Sınıf isimlerini kontrol et
-        if 'class_names' in f.attrs:
-            class_names = json.loads(f.attrs['class_names'])
-            st.write("Model sınıf isimleri:", class_names)
-        else:
-            st.warning("Model dosyasında sınıf isimleri bulunamadı!")
-            class_names = ['Elma_Karalekesi', 'Elma_Saglikli', 'Domates_ErkenYaprakküfü', 'Domates_Saglikli']
-except Exception as e:
-    st.error(f"Model dosyası okunurken hata oluştu: {str(e)}")
-    class_names = ['Elma_Karalekesi', 'Elma_Saglikli', 'Domates_ErkenYaprakküfü', 'Domates_Saglikli']
-
 # Modeli yükle
 @st.cache_resource
 def load_model():
@@ -114,6 +91,9 @@ if model is None:
 # Model özeti
 st.write("Model Özeti:")
 model.summary(print_fn=lambda x: st.text(x))
+
+# Sınıf isimleri
+class_names = ['Elma_Karalekesi', 'Elma_Saglikli', 'Domates_ErkenYaprakküfü', 'Domates_Saglikli']
 
 # Başlık ve açıklama
 st.title("🌿 Bitki Hastalığı Tespiti")
