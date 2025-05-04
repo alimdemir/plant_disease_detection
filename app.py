@@ -17,24 +17,30 @@ st.set_page_config(
 def load_model():
     try:
         st.write("Model yükleniyor...")
-        # Google Drive linki
         url = "https://drive.google.com/uc?export=download&id=1yHv9PV0KlezrKTIVg6yhBf9QM980EfhX"
         
-        # Dosyayı indir
         session = requests.Session()
         response = session.get(url, stream=True)
         
-        # Büyük dosyalar için onay sayfası kontrolü
+        # Büyük dosyalar için onay kontrolü
         for key, value in response.cookies.items():
             if key.startswith('download_warning'):
                 url = f'https://drive.google.com/uc?export=download&confirm={value}&id=1yHv9PV0KlezrKTIVg6yhBf9QM980EfhX'
                 response = session.get(url, stream=True)
                 break
-        
-        # Modeli doğrudan yükle
-        model = tf.keras.models.load_model(response.content)
+
+        # İçeriği geçici bir dosyaya yaz
+        model_path = "bitki_modeli.h5"
+        with open(model_path, "wb") as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
+
+        # Modeli yükle
+        model = tf.keras.models.load_model(model_path)
         st.success("Model başarıyla yüklendi!")
         return model
+
     except Exception as e:
         st.error(f"Model yüklenirken hata oluştu: {str(e)}")
         return None
