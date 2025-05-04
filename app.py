@@ -5,6 +5,7 @@ from PIL import Image
 import os
 import h5py
 import json
+import gdown
 
 # Sayfa yapılandırması
 st.set_page_config(
@@ -19,9 +20,28 @@ st.write("Dosya listesi:", os.listdir())
 
 # Model dosyasının yolunu belirle
 MODEL_PATH = os.path.join(os.getcwd(), "plant_diesase_model.h5")
-st.write("Model dosyası yolu:", MODEL_PATH)
-st.write("Model dosyası var mı:", os.path.exists(MODEL_PATH))
-st.write("Dosya boyutu:", os.path.getsize(MODEL_PATH))
+
+# Google Drive'dan model indirme
+@st.cache_resource
+def download_model():
+    try:
+        if not os.path.exists(MODEL_PATH):
+            st.info("Model dosyası indiriliyor...")
+            # Google Drive linki
+            file_id = "1yHv9PV0KlezrKTIVg6yhBf9QM980EfhX"
+            url = f'https://drive.google.com/uc?id={file_id}'
+            # Dosyayı indir
+            gdown.download(url, MODEL_PATH, quiet=False)
+            st.success("Model dosyası başarıyla indirildi!")
+            return True
+        return True
+    except Exception as e:
+        st.error(f"Model indirilirken hata oluştu: {str(e)}")
+        return False
+
+# Modeli indir
+if not download_model():
+    st.stop()
 
 # Model dosyasının içeriğini kontrol et
 try:
