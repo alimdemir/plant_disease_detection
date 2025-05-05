@@ -1,91 +1,106 @@
 import streamlit as st
+import numpy as np
+import tensorflow as tf
+from PIL import Image
+import os
+import requests
 
-st.set_page_config(page_title="Satranç Oyunu", layout="wide")
+# Sayfa yapılandırması
+st.set_page_config(
+    page_title="Bitki Hastalığı Tespiti",
+    page_icon="🌿",
+    layout="centered"
+)
 
-st.title("♟️ Satranç Oyunu")
-st.markdown("Streamlit + HTML5 tabanlı Chessboard.js ile hazırlanmıştır.")
+# Google Drive'dan model yükleme
+@st.cache_resource
+def load_model():
+    try:
+        st.write("Model yükleniyor...")
+        url = "https://drive.google.com/uc?export=download&id=1yHv9PV0KlezrKTIVg6yhBf9QM980EfhX"
+        
+        session = requests.Session()
+        response = session.get(url, stream=True)
+        
+        # Büyük dosyalar için onay kontrolü
+        for key, value in response.cookies.items():
+            if key.startswith('download_warning'):
+                url = f'https://drive.google.com/uc?export=download&confirm={value}&id=1yHv9PV0KlezrKTIVg6yhBf9QM980EfhX'
+                response = session.get(url, stream=True)
+                break
 
-chess_html = """
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <style>
-    #board {
-      width: 500px;
-      margin: 20px auto;
-    }
-    .board {
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.15);
-    }
-  </style>
-  <link rel="stylesheet" href="https://unpkg.com/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css" />
-</head>
-<body>
-  <div id="board" class="board"></div>
+        # İçeriği geçici bir dosyaya yaz
+        model_path = "bitki_modeli.h5"
+        with open(model_path, "wb") as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.13.4/chess.min.js"></script>
-  <script src="https://unpkg.com/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
-  <script>
-    var board = null;
-    var game = new Chess();
+        # Modeli yükle
+        model = tf.keras.models.load_model(model_path)
+        st.success("Model başarıyla yüklendi!")
+        return model
 
-    function onDragStart (source, piece, position, orientation) {
-      if (game.game_over() || 
-          (game.turn() === 'w' && piece.search(/^b/) !== -1) ||
-          (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
-        return false;
-      }
-    }
+    except Exception as e:
+        st.error(f"Model yüklenirken hata oluştu: {str(e)}")
+        return None
 
-    function onDrop (source, target) {
-      var move = game.move({
-        from: source,
-        to: target,
-        promotion: 'q'
-      });
+# Modeli yükle
+model = load_model()
+if model is None:
+    st.stop()
 
-      if (move === null) return 'snapback';
+# Model özeti
+st.write("Model Özeti:")
+model.summary(print_fn=lambda x: st.text(x))
 
-      updateStatus();
-    }
+# Sınıf isimleri
+class_names = ['Elma_Karalekesi', 'Elma_Saglikli', 'Domates_ErkenYaprakküfü', 'Domates_Saglikli']
 
-    function onSnapEnd () {
-      board.position(game.fen());
-    }
+# Başlık ve açıklama
+st.title("🌿 Bitki Hastalığı Tespiti")
+st.markdown("""
+    Bu uygulama, bitki yapraklarının sağlıklı olup olmadığını tespit etmenize yardımcı olur.
+    Lütfen bir yaprak fotoğrafı yükleyin.
+""")
 
-    function updateStatus () {
-      var status = '';
-      if (game.in_checkmate()) {
-        status = 'Oyun bitti. Mat oldunuz!';
-      } else if (game.in_draw()) {
-        status = 'Beraberlik!';
-      } else {
-        status = (game.turn() === 'w' ? 'Beyaz' : 'Siyah') + ' sırası.';
-        if (game.in_check()) {
-          status += ' Şah çekildi!';
-        }
-      }
-      document.getElementById('status').innerHTML = status;
-    }
+# Dosya yükleme alanı
+uploaded_file = st.file_uploader(
+    "Bir yaprak fotoğrafı yükleyin",
+    type=["jpg", "jpeg", "png"],
+    help="Desteklenen formatlar: JPG, JPEG, PNG"
+)
 
-    var config = {
-      draggable: true,
-      position: 'start',
-      onDragStart: onDragStart,
-      onDrop: onDrop,
-      onSnapEnd: onSnapEnd
-    };
+if uploaded_file is not None:
+    # Görüntüyü yükle ve göster
+    image = Image.open(uploaded_file).convert('RGB')
+    st.image(image, caption='Yüklenen Görsel', use_column_width=True)
 
-    board = Chessboard('board', config);
-  </script>
+    # Görüntüyü işle
+    img = image.resize((224, 224))
+    img_array = tf.keras.preprocessing.image.img_to_array(img)
+    img_array = tf.expand_dims(img_array, 0)
+    img_array = img_array / 255.0
 
-  <div style="text-align:center; margin-top: 20px;">
-    <div id="status" style="font-weight: bold; font-size: 18px;">Beyaz sırası.</div>
-  </div>
-</body>
-</html>
-"""
+    # Tahmin yap
+    with st.spinner('Tahmin yapılıyor...'):
+        predictions = model.predict(img_array)
+        predicted_class = class_names[np.argmax(predictions[0])]
+        confidence = float(np.max(predictions[0])) * 100
 
-st.components.v1.html(chess_html, height=650)
+    # Sonucu göster
+    st.markdown(f"""
+        <div style='background-color: #dff0d8; color: #3c763d; padding: 15px; border-radius: 5px; margin-top: 20px;'>
+            <h3>🌱 Tahmin Sonucu</h3>
+            <p>Durum: <strong>{predicted_class}</strong></p>
+            <p>Güven: <strong>{confidence:.2f}%</strong></p>
+        </div>
+    """, unsafe_allow_html=True)
+
+# Alt bilgi
+st.markdown("---")
+st.markdown("""
+    <div style='text-align: center'>
+        <p>© 2024 Bitki Hastalığı Tespiti</p>
+    </div>
+""", unsafe_allow_html=True)
